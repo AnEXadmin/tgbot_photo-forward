@@ -8,21 +8,13 @@ from gino import Gino
 from gino.schema import GinoSchemaVisitor
 from sqlalchemy import Column, Integer, BigInteger, String, Sequence, TIMESTAMP, Boolean, DATE, JSON, and_, DateTime, distinct
 from sqlalchemy import sql
-#from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine, AsyncEngine
-#from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from aiogram.types import (Message, InlineKeyboardMarkup, InlineKeyboardButton,
                            CallbackQuery, LabeledPrice, PreCheckoutQuery, ReplyKeyboardMarkup, KeyboardButton, BotCommand)
 import lists as txt
 import menu as mn
 from config import host, db_user, db_pass, db_name, TOKEN, root_id, admin_id, users_id, SQLE_URL
 
-#engine: AsyncEngine = create_async_engine(SQLE_URL, echo=True)
-#async_session = async_sessionmaker(engine)
-
 db = Gino()
-
-
-
 
 class Partner(db.Model):
     __tablename__ = 'partner'
@@ -59,7 +51,6 @@ class CMD:
     async def get_stat(self):
         pass
     async def get_city(self) -> List:
- #       if req == 'city':
         result = await self.Partner.query.distinct(Partner.city).gino.all()
         return  result
     async def add_partner(**kwargs):

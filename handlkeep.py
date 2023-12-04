@@ -1,10 +1,8 @@
-import jsonify
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import CommandStart, state
+from aiogram.dispatcher.filters import CommandStart
 from aiogram.types.base import String
-from aiogram.types import (Message, InlineKeyboardMarkup, InlineKeyboardButton,
-                           CallbackQuery, BotCommand, ContentType)
+from aiogram.types import Message, CallbackQuery
 
 import dbkeep
 import lists as txt
@@ -67,7 +65,6 @@ async def sh_nm_balances(call: CallbackQuery, state: FSMContext):
     result = str(callback_data[2:])
     st = callback_data[2:]
     text = f'yor choice {result} , press on buttons for next step or /cancel'
-    print(call.message.from_user.id)
     markup = mn.choices
     await call.message.edit_reply_markup()
     await call.message.answer(text=text, reply_markup=markup)
@@ -83,10 +80,7 @@ async def sh_nm_balances(call: CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(text="bycity", state=states.Balance.Start)
 async def input_city(call: CallbackQuery, state: FSMContext):
     callback_data = call.data
-    req = callback_data[1:]
     req = await Partner.select('id', 'city', 'name', 'kassa_name', 'address').distinct(Partner.city).gino.all()
-    #    data = CMD.get_city()
-    print(req)
     await call.message.answer(req)
 
 
@@ -100,12 +94,8 @@ async def show_money(message: Message):
 
 
 @dp.callback_query_handler(text="bypartner", state=states.Balance.Start)
-async def input_city(call: CallbackQuery, state: FSMContext):
-    callback_data = call.data
-    #    req = callback_data[1:]
+async def input_city(call: CallbackQuery):
     req = await Partner.select('id', 'city', 'name', 'kassa_name', 'address', 'money').distinct(Partner.name).gino.all()
-    #    data = CMD.get_city()
-    print(req)
     await call.message.edit_reply_markup()
     await call.message.answer(req, reply_markup=mn.operation)
     await states.Balance.Operation.set()
@@ -114,10 +104,8 @@ async def input_city(call: CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(state=states.Balance.Operation)
 async def ch_operation(call: CallbackQuery, state: FSMContext):
     callback_data: String = call.data
-    print(callback_data)
     if 'money' not in callback_data:
         param = callback_data[6:]
-        print(param)
         callback_data = 'reserv' + param
     else:
         callback_data = callback_data
@@ -153,7 +141,6 @@ async def get_kassa_id(message: Message, state: FSMContext):
 
     ids = await Partner.select('id').gino.all()
     if kassa_id not in str(ids):
-        print(f'id : {kassa_id}\nids: {ids}')
         await message.answer('id not in list input num or press /cancel')
     else:
         kassa_name = await Partner.select('kassa_name').where(Partner.id == int(kassa_id)).gino.first()
@@ -230,18 +217,6 @@ async def get_city(message: types.Message, state: FSMContext):
     await states.NewPartner.KassaName.set()
     await state.update_data(partner=partner)
 
-
-# @dp.message_handler(state=states.NewPartner.KassaID)
-# async def get_kassa_id(message: types.Message, state: FSMContext):
-#    kassa_id = message.text
-#    data = await state.get_data()
-#    partner: Partner = data.get('partner')
-#    partner.kassa_id = kassa_id
-#    await message.answer(("Partner kassa_id (number): {kassa_id}"
-#                          "\ninput kassa name or press /cancel").format(kassa_id=kassa_id))
-#    await state.set_state(states.NewPartner.KassaName)
-#    await state.update_data(partner=partner)
-
 @dp.message_handler(state=states.NewPartner.KassaName)
 async def get_kassa_id(message: types.Message, state: FSMContext):
     kassa_name = message.text
@@ -287,29 +262,6 @@ async def get_address(message: types.Message, state: FSMContext):
     await states.NewPartner.Confirm.set()
     await state.update_data(partner=partner)
 
-
-# @dp.message_handler(state=states.NewPartner.Balance)
-# async def get_balance(message: types.Message, state: FSMContext):
-#    balance = message.text
-#    data = await state.get_data()
-#    partner: Partner = data.get("partner")
-#    partner.balance = balance
-#    chck = '1234567890,.'
-#    if balance in chck:
-#        await message.answer(
-#            ("partner Name: {name}, city : {city} id: {kassa_id}, kassa: {kassa_name} address: {address} balance: {balance}"
-#             "\n/confirm or /cancel").format(name=partner.name, kassa_id=partner.kassa_id,
-#                                             address=partner.address, city=partner.city,
-#                                             kassa_name=partner.kassa_name, balance=partner.balance)
-#        )
-#        await state.set_state(states.NewPartner.Confirm)
-#        await state.update_data(partner=partner)
-#    else:
-#        await  message.answer(f'you input not numeric balance: {balance}, balance set as 0\n/confirm or /cancel')
-#        partner.balance = 0
-#        await state.set_state(states.NewPartner.Confirm)
-#        await state.update_data(partner=partner)
-
 @dp.message_handler(state=states.NewPartner.Confirm)
 async def do_confirm(message: types.Message, state: FSMContext):
     result = message.text
@@ -321,21 +273,12 @@ async def do_confirm(message: types.Message, state: FSMContext):
     address = partner.address
     photo = partner.photo
     if result == '/confirm':
-        #        await Partner(name=name,city=city,kassa_id=kassa_id,kassa_name=kassa_name,photo=photo,address=address,money=balance).create()
-        # await Item(item_from=i_from[i].text,item_to=i_to[i].text,item_in=i_in[i].text,item_out=i_out[i].text).create()
-        #        await partner.create()
-        #        print('1')
         await CMD.add_partner(name=name, city=city, kassa_name=kassa_name, photo=photo, address=address)
-        #        print('2')
         await message.answer('Касса успешно добавлена!')
         await state.reset_state()
     else:
         await message.answer(f"Вы ввели: {result} \nПодтвердить: /confirm отмена: /cancel")
 
-
-@dp.message_handler(commands=['balans'])
-async def check_blance():
-    pass
 
 
 @dp.message_handler(commands=["partners"])
@@ -403,12 +346,10 @@ async def get_city(message: Message):
     param = 'city'
     btn = await dbkeep.kbmake(param=param)
     await message.answer('city:', reply_markup=btn)
-#    await states
 
 
 @dp.message_handler(commands=['photo'])
 async def search_photo(message: Message):
-#    await state.finish()
     await message.answer('критерии выбора:',reply_markup=mn.choices)
     await states.Photo.Show.set()
 
@@ -418,7 +359,6 @@ async def param_for_photo(call: CallbackQuery, state: FSMContext):
     param = callback_data
     await call.message.edit_reply_markup()
     await state.update_data({'param': param})
-#    markup = await dbkeep.kassa_first(param)
     markup = await dbkeep.photo_one(param)
     await call.message.answer(text=param,reply_markup=markup)
     if param == 'kassa':
@@ -435,7 +375,6 @@ async def ikb_form(call: CallbackQuery, state: FSMContext):
     param = std.get('param')
     req = callback_data
     await state.update_data({'req': req})
-#    markup = await dbkeep.show_ikb_kassa(param, req)
     btn = await dbkeep.photo_two(param, req)
     await call.message.edit_reply_markup()
     await call.message.answer(text=callback_data, reply_markup=btn)
@@ -448,7 +387,6 @@ async def ikb_form(call: CallbackQuery, state: FSMContext):
     param = std.get('param')
     req = std.get('req')
     st = callback_data
-#    markup = await dbkeep.kassa_second(param, req, st)
     markup = await dbkeep.photo_three(param, req, st)
     text = f'Список отбора по {req} {param} {st}:'
     await call.message.edit_reply_markup()
@@ -458,13 +396,10 @@ async def ikb_form(call: CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(state=states.Photo.Finish)
 async def ikb_photo_finish(call: CallbackQuery, state: FSMContext):
     callback_data = call.data
-    print(callback_data)
     photo_req = await Partner.select('photo').where(Partner.id == int(callback_data)).gino.first()
     info = await Partner.select('address').where(Partner.id == int(callback_data)).gino.first()
     text_inf = info[0]
-    print(text_inf)
     file_id = photo_req[0]
-    print(file_id)
     await call.message.answer_photo(file_id, caption=text_inf)
     await call.message.edit_reply_markup()
     await state.finish()
